@@ -7,21 +7,30 @@ import { User } from '../users/entities/user.entity';
 import { CommentDto } from './dto/comment.dto';
 import { Prisma } from '@prisma/client';
 
+import { UploadService } from '../../common/upload/upload.service';
+
 @Injectable()
 export class PostsService {
   constructor(
     @Inject('PrismaService')
     private prismaService: CustomPrismaService<ExtendedPrismaClient>,
+    private uploadService: UploadService,
   ) {
   }
 
-  create(
+  async create(
     createPostDto: CreatePostDto,
     user: User,
     files: Express.Multer.File[],
   ) {
     const hashtags = createPostDto.content.match(/#[^\s#]+/g);
     console.log('files', files);
+
+    // Upload files to Supabase
+    const imageUrls = files
+      ? await Promise.all(files.map(file => this.uploadService.uploadFile(file, 'posts')))
+      : [];
+
     return this.prismaService.client.post.create({
       select: {
         User: {
@@ -41,9 +50,9 @@ export class PostsService {
         userId: user.id,
         Images: {
           createMany: {
-            data: files?.map((v) => ({
-              link: '/' + v.path.replaceAll('\\', '/'),
-            })) || [],
+            data: imageUrls.map((url) => ({
+              link: url,
+            })),
           },
         },
         Hashtags: {

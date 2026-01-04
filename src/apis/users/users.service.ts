@@ -6,11 +6,14 @@ import { ExtendedPrismaClient } from '../../prisma.extension';
 import * as bcrypt from 'bcrypt';
 import { User } from "./entities/user.entity";
 
+import { UploadService } from '../../common/upload/upload.service';
+
 @Injectable()
 export class UsersService {
   constructor(
     @Inject('PrismaService')
     private prismaService: CustomPrismaService<ExtendedPrismaClient>,
+    private uploadService: UploadService,
   ) {
   }
 
@@ -22,6 +25,11 @@ export class UsersService {
       return 'already_exist';
     }
     console.log('file', file);
+
+    const imageUrl = file
+      ? await this.uploadService.uploadFile(file, 'users')
+      : null;
+
     return this.prismaService.client.user.create({
       select: {
         password: false,
@@ -32,7 +40,7 @@ export class UsersService {
       data: {
         id: createUserDto.id,
         nickname: createUserDto.nickname,
-        image: `/${file.path.replaceAll('\\', '/')}`,
+        image: imageUrl || '',
         password: await bcrypt.hash(createUserDto.password, 12),
       },
     });
