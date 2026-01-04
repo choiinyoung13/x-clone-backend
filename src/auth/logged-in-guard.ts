@@ -1,4 +1,4 @@
-import {CanActivate, ExecutionContext, Injectable} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 
 @Injectable()
 export class LoggedInGuard implements CanActivate {
@@ -10,14 +10,15 @@ export class LoggedInGuard implements CanActivate {
     if (request.user?.id && request.isAuthenticated()) {
       return request.user?.id && request.isAuthenticated();
     }
-    const nextToken = request.cookies['authjs.session-token'];
+    const nextToken = request.cookies['__Secure-authjs.session-token'] || request.cookies['authjs.session-token'];
+    const salt = request.cookies['__Secure-authjs.session-token'] ? "__Secure-authjs.session-token" : "authjs.session-token";
     console.log(nextToken);
     if (nextToken) {
       const { decode } = await import("next-auth/jwt");
       const decoded = await decode({
         token: nextToken,
         secret: process.env.AUTH_SECRET,
-        salt: "authjs.session-token",
+        salt,
       });
       console.log(decoded);
       request.user = {
